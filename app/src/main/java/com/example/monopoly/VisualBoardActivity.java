@@ -1,14 +1,20 @@
 package com.example.monopoly;
 
 import android.os.Bundle;
-import android.view.ViewGroup;
+import android.widget.GridLayout;
 import android.widget.ImageView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class VisualBoardActivity extends AppCompatActivity {
     private GameViewModel viewModel;
+    private GridLayout grid;
+    private final Map<Integer, ImageView> playerTokens = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -16,7 +22,7 @@ public class VisualBoardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_visual_board);
 
         viewModel = new ViewModelProvider(this).get(GameViewModel.class);
-        ViewGroup grid = findViewById(R.id.visual_board);
+        grid = findViewById(R.id.visual_board);
 
         Map<Integer, Tile> tiles = viewModel.getTileMap();
         for (int i = 0; i < 40; i++) {
@@ -29,7 +35,40 @@ public class VisualBoardActivity extends AppCompatActivity {
             } else {
                 tileView.setImageResource(R.drawable.tile_property);
             }
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.rowSpec = GridLayout.spec(i / 10);
+            params.columnSpec = GridLayout.spec(i % 10);
+            tileView.setLayoutParams(params);
             grid.addView(tileView);
         }
+
+        addPlayerTokens(viewModel.players.getValue());
+        viewModel.players.observe(this, this::addPlayerTokens);
+    }
+
+    private void addPlayerTokens(List<Player> players) {
+        if (players == null) {
+            return;
+        }
+        for (Player p : players) {
+            ImageView token = playerTokens.get(p.id);
+            if (token == null) {
+                token = new ImageView(this);
+                token.setImageResource(R.drawable.icon_player);
+                grid.addView(token);
+                playerTokens.put(p.id, token);
+            }
+            moveToken(token, p.position);
+        }
+    }
+
+    private void moveToken(ImageView token, int position) {
+        GridLayout.LayoutParams params = (GridLayout.LayoutParams) token.getLayoutParams();
+        if (params == null) {
+            params = new GridLayout.LayoutParams();
+        }
+        params.rowSpec = GridLayout.spec(position / 10);
+        params.columnSpec = GridLayout.spec(position % 10);
+        token.setLayoutParams(params);
     }
 }

@@ -38,6 +38,37 @@ public class GameViewModel extends ViewModel {
         return tileMap;
     }
 
+    /**
+     * Roll two six-sided dice.
+     *
+     * @return array containing die1, die2 and their total.
+     */
+    public int[] rollDice() {
+        int die1 = 1 + (int) (Math.random() * 6);
+        int die2 = 1 + (int) (Math.random() * 6);
+        return new int[] { die1, die2, die1 + die2 };
+    }
+
+    /**
+     * Move the given player forward by the supplied roll amount.
+     * Wraps around the board and awards $200 for passing GO.
+     */
+    public void movePlayer(Player player, int rollTotal) {
+        int oldPos = player.position;
+        int newPos = (oldPos + rollTotal) % 40;
+        if (oldPos + rollTotal >= 40) {
+            player.money += 200;
+        }
+        player.position = newPos;
+
+        Tile tile = tileMap.get(newPos);
+        if (tile != null) {
+            processTile(player, tile);
+        }
+        // ensure observers are notified of position change even if nothing else happens
+        players.setValue(players.getValue());
+    }
+
     public void processTile(Player player, Tile tile) {
         if (tile.type == TileType.PROPERTY && tile.isOwned && tile.ownerId != player.id) {
             List<Player> currentPlayers = players.getValue();
