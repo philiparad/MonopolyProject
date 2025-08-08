@@ -1,5 +1,7 @@
 package com.example.monopoly;
 
+import android.util.Log;
+
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -40,16 +42,30 @@ public class GameViewModel extends ViewModel {
 
     public void processTile(Player player, Tile tile) {
         if (tile.type == TileType.PROPERTY && tile.isOwned && tile.ownerId != player.id) {
-            int rent = 10 + 5 * tile.houseCount;
-            player.money -= rent;
-            for (Player p : players.getValue()) {
+            List<Player> currentPlayers = players.getValue();
+            if (currentPlayers == null) {
+                return;
+            }
+
+            Player owner = null;
+            for (Player p : currentPlayers) {
                 if (p.id == tile.ownerId) {
-                    p.money += rent;
+                    owner = p;
                     break;
                 }
             }
-            // Trigger observers
-            players.setValue(players.getValue());
+
+            if (owner == null) {
+                Log.w("GameViewModel", "Owned tile has no corresponding player: " + tile.name);
+                return;
+            }
+
+            int rent = 10 + 5 * tile.houseCount;
+            player.money -= rent;
+            owner.money += rent;
+
+            // Trigger observers only after successful transaction
+            players.setValue(currentPlayers);
         }
     }
 
