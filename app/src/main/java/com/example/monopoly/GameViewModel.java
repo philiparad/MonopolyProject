@@ -19,6 +19,23 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<List<Player>> players = new MutableLiveData<>();
     private final Map<Integer, Tile> tileMap = new HashMap<>();
 
+    /**
+     * Emitted when a player lands on an unowned property and should be asked to
+     * purchase it. The value contains the player and the tile in question.
+     */
+    public final MutableLiveData<PurchaseEvent> purchaseEvent = new MutableLiveData<>();
+
+    /** Simple holder for a purchase prompt consisting of the player and tile. */
+    public static class PurchaseEvent {
+        public final Player player;
+        public final Tile tile;
+
+        public PurchaseEvent(Player player, Tile tile) {
+            this.player = player;
+            this.tile = tile;
+        }
+    }
+
     public GameViewModel() {
         // Initialise some default players
         List<Player> initialPlayers = new ArrayList<>();
@@ -70,7 +87,17 @@ public class GameViewModel extends ViewModel {
     }
 
     public void processTile(Player player, Tile tile) {
-        if (tile.type == TileType.PROPERTY && tile.isOwned && tile.ownerId != player.id) {
+        if (tile.type != TileType.PROPERTY) {
+            return;
+        }
+
+        if (!tile.isOwned) {
+            // prompt the UI to offer a purchase
+            purchaseEvent.setValue(new PurchaseEvent(player, tile));
+            return;
+        }
+
+        if (tile.ownerId != player.id) {
             List<Player> currentPlayers = players.getValue();
             if (currentPlayers == null) {
                 return;
@@ -96,6 +123,32 @@ public class GameViewModel extends ViewModel {
             // Trigger observers only after successful transaction
             players.setValue(currentPlayers);
         }
+    }
+
+    /**
+     * Purchase the given tile for the provided player, deducting the tile price
+     * and updating ownership. Observers are notified of the change.
+     */
+    public void buyProperty(Player player, Tile tile) {
+        if (tile.type != TileType.PROPERTY || tile.isOwned) {
+            return;
+        }
+
+        if (player.money >= tile.price) {
+            player.money -= tile.price;
+            tile.isOwned = true;
+            tile.ownerId = player.id;
+            players.setValue(players.getValue());
+        }
+        // clear any existing purchase prompt
+        purchaseEvent.setValue(null);
+    }
+
+    /**
+     * Clear any outstanding purchase prompt without buying the property.
+     */
+    public void declinePurchase() {
+        purchaseEvent.setValue(null);
     }
 
     public void upgradeHouse(int playerId, Tile tile) {
