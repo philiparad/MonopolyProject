@@ -30,10 +30,8 @@ public class GameViewModel extends ViewModel {
         initialPlayers.add(p2);
         players.setValue(initialPlayers);
 
-        // Create a simple 40 tile board filled with properties
-        for (int i = 0; i < 40; i++) {
-            tileMap.put(i, new Tile("Tile " + i, TileType.PROPERTY, 100));
-        }
+        // Populate the board with the standard Monopoly tiles
+        tileMap.putAll(Board.createTiles());
     }
 
     public Map<Integer, Tile> getTileMap() {
@@ -60,7 +58,7 @@ public class GameViewModel extends ViewModel {
                 return;
             }
 
-            int rent = 10 + 5 * tile.houseCount;
+            int rent = tile.rent + 5 * tile.houseCount;
             player.money -= rent;
             owner.money += rent;
 
