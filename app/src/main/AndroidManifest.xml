@@ -12,11 +12,12 @@
         <activity android:name=".SettingsActivity"/>
         <activity android:name=".StatsActivity"/>
         <activity android:name=".GameBoardActivity"/>
-        <activity android:name=".MainActivity">
         <activity android:name=".VisualBoardActivity"/>
         <activity android:name=".PropertyListActivity"/>
         <activity android:name=".MainActivity"/>
-        <activity android:name=".MainMenuActivity">
+        <activity
+            android:name=".MainMenuActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
