@@ -4,3 +4,16 @@ gradle/wrapper/gradle-wrapper.jar
 local.properties
 *.log
 /build
+
+# Ignore binary files
+*.class
+*.jar
+*.apk
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.o
+*.a
+*.lib
