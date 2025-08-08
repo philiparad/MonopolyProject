@@ -15,7 +15,7 @@ public class MainActivity extends AppCompatActivity {
         navView.setOnItemSelectedListener(item -> {
             switch (item.getItemId()) {
                 case R.id.navigation_game:
-                    startActivity(new Intent(this, GameBoardActivity.class));
+                    startActivity(new Intent(this, VisualBoardActivity.class));
                     return true;
                 case R.id.navigation_stats:
                     startActivity(new Intent(this, StatsActivity.class));
