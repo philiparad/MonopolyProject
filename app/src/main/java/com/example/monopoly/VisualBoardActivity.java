@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -44,6 +45,12 @@ public class VisualBoardActivity extends AppCompatActivity {
 
         addPlayerTokens(viewModel.players.getValue());
         viewModel.players.observe(this, this::addPlayerTokens);
+
+        viewModel.purchaseEvent.observe(this, event -> {
+            if (event != null) {
+                showPurchaseDialog(event);
+            }
+        });
     }
 
     private void addPlayerTokens(List<Player> players) {
@@ -70,5 +77,15 @@ public class VisualBoardActivity extends AppCompatActivity {
         params.rowSpec = GridLayout.spec(position / 10);
         params.columnSpec = GridLayout.spec(position % 10);
         token.setLayoutParams(params);
+    }
+
+    private void showPurchaseDialog(GameViewModel.PurchaseEvent event) {
+        new AlertDialog.Builder(this)
+                .setTitle("Purchase Property")
+                .setMessage("Buy " + event.tile.name + " for $" + event.tile.price + "?")
+                .setPositiveButton("Buy", (dialog, which) ->
+                        viewModel.buyProperty(event.player, event.tile))
+                .setNegativeButton("Cancel", (dialog, which) -> viewModel.declinePurchase())
+                .show();
     }
 }
