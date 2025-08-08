@@ -1,29 +1,68 @@
-public void processTile(Player player, Tile tile) {
-    if (tile.type == TileType.PROPERTY && tile.isOwned && tile.ownerId != player.id) {
-        int rent = 10 + 5 * tile.houseCount;
-        player.money -= rent;
-        for (Player p : players.getValue()) {
-            if (p.id == tile.ownerId) {
-                p.money += rent;
-                db.playerDao().update(p);
-                break;
-            }
-        }
-        db.playerDao().update(player);
-        players.setValue(db.playerDao().getAll());
-    }
-}
+package com.example.monopoly;
 
-public void upgradeHouse(int playerId, Tile tile) {
-    if (tile.ownerId == playerId && tile.houseCount < 5) {
-        tile.houseCount++;
-        for (Player p : players.getValue()) {
-            if (p.id == playerId && p.money >= 50) {
-                p.money -= 50;
-                db.playerDao().update(p);
-                break;
-            }
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ViewModel holding in-memory game state. This replaces the previously referenced
+ * database layer so that activities can function without undefined dependencies.
+ */
+public class GameViewModel extends ViewModel {
+    // Public so that existing activities can observe or query the list directly
+    public final MutableLiveData<List<Player>> players = new MutableLiveData<>();
+    private final Map<Integer, Tile> tileMap = new HashMap<>();
+
+    public GameViewModel() {
+        // Initialise some default players
+        List<Player> initialPlayers = new ArrayList<>();
+        Player p1 = new Player("Player 1");
+        p1.id = 1;
+        Player p2 = new Player("Player 2");
+        p2.id = 2;
+        initialPlayers.add(p1);
+        initialPlayers.add(p2);
+        players.setValue(initialPlayers);
+
+        // Create a simple 40 tile board filled with properties
+        for (int i = 0; i < 40; i++) {
+            tileMap.put(i, new Tile("Tile " + i, TileType.PROPERTY, 100));
         }
     }
-    players.setValue(db.playerDao().getAll());
+
+    public Map<Integer, Tile> getTileMap() {
+        return tileMap;
+    }
+
+    public void processTile(Player player, Tile tile) {
+        if (tile.type == TileType.PROPERTY && tile.isOwned && tile.ownerId != player.id) {
+            int rent = 10 + 5 * tile.houseCount;
+            player.money -= rent;
+            for (Player p : players.getValue()) {
+                if (p.id == tile.ownerId) {
+                    p.money += rent;
+                    break;
+                }
+            }
+            // Trigger observers
+            players.setValue(players.getValue());
+        }
+    }
+
+    public void upgradeHouse(int playerId, Tile tile) {
+        if (tile.ownerId == playerId && tile.houseCount < 5) {
+            tile.houseCount++;
+            for (Player p : players.getValue()) {
+                if (p.id == playerId && p.money >= 50) {
+                    p.money -= 50;
+                    break;
+                }
+            }
+            players.setValue(players.getValue());
+        }
+    }
 }

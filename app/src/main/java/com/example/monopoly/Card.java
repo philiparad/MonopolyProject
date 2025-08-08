@@ -1,7 +1,5 @@
 package com.example.monopoly;
 
-package com.example.monopoly;
-
 public class Card {
     public String description;
     public int moneyChange;

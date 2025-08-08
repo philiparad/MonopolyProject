@@ -1,0 +1,14 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_game"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Game" />
+    <item
+        android:id="@+id/navigation_stats"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="Stats" />
+    <item
+        android:id="@+id/navigation_settings"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:title="Settings" />
+</menu>

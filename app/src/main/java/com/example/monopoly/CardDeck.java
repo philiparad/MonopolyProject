@@ -1,7 +1,5 @@
 package com.example.monopoly;
 
-package com.example.monopoly;
-
 import java.util.*;
 
 public class CardDeck {

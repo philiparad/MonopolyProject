@@ -13,7 +13,7 @@ public class MainMenuActivity extends AppCompatActivity {
     }
 
     public void startGame(View view) {
-        Intent intent = new Intent(this, GameBoardActivity.class);
+        Intent intent = new Intent(this, VisualBoardActivity.class);
         startActivity(intent);
     }
 
