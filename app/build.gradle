@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -35,5 +36,5 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.6.2'
     implementation 'androidx.lifecycle:lifecycle-livedata:2.6.2'
     implementation 'androidx.room:room-runtime:2.6.1'
-    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+    kapt 'androidx.room:room-compiler:2.6.1'
 }
