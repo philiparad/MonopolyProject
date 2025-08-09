@@ -11,6 +11,7 @@ public class Tile {
     public int houseCount;
     public int houseCost;
     public int mortgageValue;
+    public boolean mortgaged;
 
     public Tile(String name, TileType type, int price, int[] rent, String colorGroup,
                 int houseCost, int mortgageValue) {
@@ -24,5 +25,6 @@ public class Tile {
         this.houseCount = 0;
         this.houseCost = houseCost;
         this.mortgageValue = mortgageValue;
+        this.mortgaged = false;
     }
 }

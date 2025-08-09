@@ -112,6 +112,9 @@ public class GameViewModel extends ViewModel {
         }
 
         if (tile.ownerId != player.id) {
+            if (tile.mortgaged) {
+                return;
+            }
             List<Player> currentPlayers = players.getValue();
             if (currentPlayers == null) {
                 return;
@@ -176,6 +179,33 @@ public class GameViewModel extends ViewModel {
      */
     public void declinePurchase() {
         purchaseEvent.setValue(null);
+    }
+
+    /**
+     * Mortgage a property, giving the owner cash equal to the mortgage value
+     * and marking the tile as mortgaged.
+     */
+    public void mortgageProperty(Player player, Tile tile) {
+        if (tile.ownerId != player.id || tile.mortgaged) {
+            return;
+        }
+        tile.mortgaged = true;
+        player.money += tile.mortgageValue;
+        players.setValue(players.getValue());
+    }
+
+    /**
+     * Remove a mortgage from a property if the owner can afford it.
+     */
+    public void unmortgageProperty(Player player, Tile tile) {
+        if (tile.ownerId != player.id || !tile.mortgaged) {
+            return;
+        }
+        if (player.money >= tile.mortgageValue) {
+            player.money -= tile.mortgageValue;
+            tile.mortgaged = false;
+            players.setValue(players.getValue());
+        }
     }
 
     public void upgradeHouse(int playerId, Tile tile) {
