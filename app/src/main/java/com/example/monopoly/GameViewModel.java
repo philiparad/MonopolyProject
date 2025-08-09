@@ -20,6 +20,10 @@ public class GameViewModel extends ViewModel {
     private final Map<Integer, Tile> tileMap = new HashMap<>();
     private int lastRollTotal;
 
+    // Track remaining houses and hotels available for building
+    private int housesAvailable = 32;
+    private int hotelsAvailable = 12;
+
     /**
      * Emitted when a player lands on an unowned property and should be asked to
      * purchase it. The value contains the player and the tile in question.
@@ -54,6 +58,14 @@ public class GameViewModel extends ViewModel {
 
     public Map<Integer, Tile> getTileMap() {
         return tileMap;
+    }
+
+    public int getHousesAvailable() {
+        return housesAvailable;
+    }
+
+    public int getHotelsAvailable() {
+        return hotelsAvailable;
     }
 
     /**
@@ -167,16 +179,52 @@ public class GameViewModel extends ViewModel {
     }
 
     public void upgradeHouse(int playerId, Tile tile) {
-        if (tile.ownerId == playerId && tile.houseCount < 5) {
-            for (Player p : players.getValue()) {
-                if (p.id == playerId && p.money >= tile.houseCost) {
-                    p.money -= tile.houseCost;
-                    tile.houseCount++;
-                    break;
-                }
-            }
-            players.setValue(players.getValue());
+        // Must own the tile and entire color group
+        if (tile.ownerId != playerId || !ownsGroup(playerId, tile.colorGroup)) {
+            return;
         }
+
+        // Cannot upgrade beyond a hotel
+        if (tile.houseCount >= 5) {
+            return;
+        }
+
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null) {
+            return;
+        }
+
+        for (Player p : currentPlayers) {
+            if (p.id != playerId) {
+                continue;
+            }
+
+            if (p.money < tile.houseCost) {
+                return;
+            }
+
+            if (tile.houseCount < 4) {
+                // Building houses
+                if (housesAvailable <= 0) {
+                    return;
+                }
+                p.money -= tile.houseCost;
+                tile.houseCount++;
+                housesAvailable--;
+            } else {
+                // Converting four houses to a hotel
+                if (hotelsAvailable <= 0) {
+                    return;
+                }
+                p.money -= tile.houseCost;
+                tile.houseCount = 5;
+                hotelsAvailable--;
+                housesAvailable += 4; // return houses to supply
+            }
+            break;
+        }
+        // notify observers of changes
+        players.setValue(currentPlayers);
     }
 
     private int countOwned(int ownerId, String color) {
