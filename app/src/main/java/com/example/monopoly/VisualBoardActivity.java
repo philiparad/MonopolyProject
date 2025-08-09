@@ -51,6 +51,16 @@ public class VisualBoardActivity extends AppCompatActivity {
                 showPurchaseDialog(event);
             }
         });
+
+        viewModel.cardDrawn.observe(this, card -> {
+            if (card != null) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Card Drawn")
+                        .setMessage(card.description)
+                        .setPositiveButton("OK", null)
+                        .show();
+            }
+        });
     }
 
     private void addPlayerTokens(List<Player> players) {

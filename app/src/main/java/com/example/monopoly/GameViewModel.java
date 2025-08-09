@@ -29,6 +29,9 @@ public class GameViewModel extends ViewModel {
      * purchase it. The value contains the player and the tile in question.
      */
     public final MutableLiveData<PurchaseEvent> purchaseEvent = new MutableLiveData<>();
+    public final MutableLiveData<Card> cardDrawn = new MutableLiveData<>();
+    private final CardDeck chanceDeck = new CardDeck("CHANCE");
+    private final CardDeck communityDeck = new CardDeck("COMMUNITY_CHEST");
 
     /** Simple holder for a purchase prompt consisting of the player and tile. */
     public static class PurchaseEvent {
@@ -101,58 +104,237 @@ public class GameViewModel extends ViewModel {
     }
 
     public void processTile(Player player, Tile tile) {
-        if (tile.type != TileType.PROPERTY) {
+        switch (tile.type) {
+            case PROPERTY:
+                if (!tile.isOwned) {
+                    purchaseEvent.setValue(new PurchaseEvent(player, tile));
+                    return;
+                }
+                if (tile.ownerId != player.id) {
+                    if (tile.mortgaged) {
+                        return;
+                    }
+                    List<Player> currentPlayers = players.getValue();
+                    if (currentPlayers == null) {
+                        return;
+                    }
+                    Player owner = null;
+                    for (Player p : currentPlayers) {
+                        if (p.id == tile.ownerId) {
+                            owner = p;
+                            break;
+                        }
+                    }
+                    if (owner == null) {
+                        Log.w("GameViewModel", "Owned tile has no corresponding player: " + tile.name);
+                        return;
+                    }
+                    int rent;
+                    if ("Utility".equals(tile.colorGroup)) {
+                        int owned = countOwned(tile.ownerId, "Utility");
+                        int multiplier = tile.rent[Math.max(0, owned - 1)];
+                        rent = multiplier * lastRollTotal;
+                    } else if ("Railroad".equals(tile.colorGroup)) {
+                        int owned = countOwned(tile.ownerId, "Railroad");
+                        rent = tile.rent[Math.max(0, owned - 1)];
+                    } else {
+                        rent = tile.rent[tile.houseCount];
+                        if (tile.houseCount == 0 && ownsGroup(tile.ownerId, tile.colorGroup)) {
+                            rent *= 2;
+                        }
+                    }
+                    player.money -= rent;
+                    owner.money += rent;
+                    players.setValue(currentPlayers);
+                }
+                break;
+            case CHANCE:
+                Card chanceCard = chanceDeck.drawCard();
+                applyCardEffect(player, chanceCard);
+                cardDrawn.setValue(chanceCard);
+                break;
+            case COMMUNITY_CHEST:
+                Card chestCard = communityDeck.drawCard();
+                applyCardEffect(player, chestCard);
+                cardDrawn.setValue(chestCard);
+                break;
+            case TAX:
+                player.money -= tile.price;
+                players.setValue(players.getValue());
+                break;
+            case GO_TO_JAIL:
+                sendToJail(player);
+                players.setValue(players.getValue());
+                break;
+            default:
+                // no action
+        }
+    }
+
+    public void applyCardEffect(Player player, Card card) {
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null) {
             return;
         }
 
-        if (!tile.isOwned) {
-            // prompt the UI to offer a purchase
-            purchaseEvent.setValue(new PurchaseEvent(player, tile));
-            return;
-        }
+        player.money += card.moneyChange;
 
-        if (tile.ownerId != player.id) {
-            if (tile.mortgaged) {
-                return;
-            }
-            List<Player> currentPlayers = players.getValue();
-            if (currentPlayers == null) {
-                return;
-            }
-
-            Player owner = null;
+        if (card.collectFromEachPlayer > 0) {
             for (Player p : currentPlayers) {
-                if (p.id == tile.ownerId) {
-                    owner = p;
-                    break;
+                if (p.id != player.id) {
+                    p.money -= card.collectFromEachPlayer;
+                    player.money += card.collectFromEachPlayer;
                 }
             }
-
-            if (owner == null) {
-                Log.w("GameViewModel", "Owned tile has no corresponding player: " + tile.name);
-                return;
-            }
-
-            int rent;
-            if ("Utility".equals(tile.colorGroup)) {
-                int owned = countOwned(tile.ownerId, "Utility");
-                int multiplier = tile.rent[Math.max(0, owned - 1)];
-                rent = multiplier * lastRollTotal;
-            } else if ("Railroad".equals(tile.colorGroup)) {
-                int owned = countOwned(tile.ownerId, "Railroad");
-                rent = tile.rent[Math.max(0, owned - 1)];
-            } else {
-                rent = tile.rent[tile.houseCount];
-                if (tile.houseCount == 0 && ownsGroup(tile.ownerId, tile.colorGroup)) {
-                    rent *= 2;
-                }
-            }
-            player.money -= rent;
-            owner.money += rent;
-
-            // Trigger observers only after successful transaction
-            players.setValue(currentPlayers);
         }
+
+        if (card.payEachPlayer > 0) {
+            for (Player p : currentPlayers) {
+                if (p.id != player.id) {
+                    p.money += card.payEachPlayer;
+                    player.money -= card.payEachPlayer;
+                }
+            }
+        }
+
+        if (card.houseRepairCost > 0 || card.hotelRepairCost > 0) {
+            int houses = 0;
+            int hotels = 0;
+            for (Tile t : tileMap.values()) {
+                if (t.ownerId == player.id) {
+                    if (t.houseCount < 5) {
+                        houses += t.houseCount;
+                    } else if (t.houseCount == 5) {
+                        hotels++;
+                    }
+                }
+            }
+            int cost = houses * card.houseRepairCost + hotels * card.hotelRepairCost;
+            player.money -= cost;
+        }
+
+        if (card.getOutOfJailFree) {
+            player.jailFreeCards++;
+        }
+
+        if (card.goToJail) {
+            sendToJail(player);
+        }
+
+        if (card.moveTo != null) {
+            movePlayerTo(player, card.moveTo);
+        } else if (card.moveBy != null) {
+            movePlayerBy(player, card.moveBy);
+        } else if (card.advanceToNearestRailroad) {
+            int target = findNearestRailroad(player.position);
+            boolean passedGo = target < player.position;
+            player.position = target;
+            if (passedGo) {
+                player.money += 200;
+            }
+            Tile tile = tileMap.get(target);
+            if (tile != null) {
+                if (tile.isOwned && tile.ownerId != player.id) {
+                    int rent = tile.rent[Math.max(0, countOwned(tile.ownerId, "Railroad") - 1)];
+                    if (card.payDoubleRent) {
+                        rent *= 2;
+                    }
+                    player.money -= rent;
+                    Player owner = getPlayer(tile.ownerId);
+                    if (owner != null) {
+                        owner.money += rent;
+                    }
+                } else if (!tile.isOwned) {
+                    purchaseEvent.setValue(new PurchaseEvent(player, tile));
+                }
+            }
+        } else if (card.advanceToNearestUtility) {
+            int target = findNearestUtility(player.position);
+            boolean passedGo = target < player.position;
+            player.position = target;
+            if (passedGo) {
+                player.money += 200;
+            }
+            Tile tile = tileMap.get(target);
+            if (tile != null) {
+                if (tile.isOwned && tile.ownerId != player.id) {
+                    int rent = 10 * lastRollTotal;
+                    player.money -= rent;
+                    Player owner = getPlayer(tile.ownerId);
+                    if (owner != null) {
+                        owner.money += rent;
+                    }
+                } else if (!tile.isOwned) {
+                    purchaseEvent.setValue(new PurchaseEvent(player, tile));
+                }
+            }
+        }
+
+        players.setValue(currentPlayers);
+    }
+
+    private void movePlayerTo(Player player, int target) {
+        int oldPos = player.position;
+        player.position = target;
+        if (target < oldPos) {
+            player.money += 200;
+        }
+        Tile tile = tileMap.get(target);
+        if (tile != null) {
+            processTile(player, tile);
+        }
+    }
+
+    private void movePlayerBy(Player player, int delta) {
+        int target = (player.position + delta) % 40;
+        if (target < 0) {
+            target += 40;
+        }
+        player.position = target;
+        Tile tile = tileMap.get(target);
+        if (tile != null) {
+            processTile(player, tile);
+        }
+    }
+
+    private void sendToJail(Player player) {
+        player.position = 10;
+        player.inJail = true;
+    }
+
+    private int findNearestRailroad(int position) {
+        int pos = (position + 1) % 40;
+        while (true) {
+            Tile t = tileMap.get(pos);
+            if (t != null && "Railroad".equals(t.colorGroup)) {
+                return pos;
+            }
+            pos = (pos + 1) % 40;
+        }
+    }
+
+    private int findNearestUtility(int position) {
+        int pos = (position + 1) % 40;
+        while (true) {
+            Tile t = tileMap.get(pos);
+            if (t != null && "Utility".equals(t.colorGroup)) {
+                return pos;
+            }
+            pos = (pos + 1) % 40;
+        }
+    }
+
+    private Player getPlayer(int id) {
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null) {
+            return null;
+        }
+        for (Player p : currentPlayers) {
+            if (p.id == id) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /**
