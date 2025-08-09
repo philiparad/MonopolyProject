@@ -61,6 +61,16 @@ public class VisualBoardActivity extends AppCompatActivity {
                         .show();
             }
         });
+
+        viewModel.tileMessage.observe(this, msg -> {
+            if (msg != null) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Tile")
+                        .setMessage(msg)
+                        .setPositiveButton("OK", null)
+                        .show();
+            }
+        });
     }
 
     private void addPlayerTokens(List<Player> players) {
