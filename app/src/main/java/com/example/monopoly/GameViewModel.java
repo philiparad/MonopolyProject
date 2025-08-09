@@ -30,6 +30,8 @@ public class GameViewModel extends ViewModel {
      */
     public final MutableLiveData<PurchaseEvent> purchaseEvent = new MutableLiveData<>();
     public final MutableLiveData<Card> cardDrawn = new MutableLiveData<>();
+    // Simple string messages to prompt the user when landing on special tiles
+    public final MutableLiveData<String> tileMessage = new MutableLiveData<>();
     private final CardDeck chanceDeck = new CardDeck("CHANCE");
     private final CardDeck communityDeck = new CardDeck("COMMUNITY_CHEST");
 
@@ -107,11 +109,13 @@ public class GameViewModel extends ViewModel {
         switch (tile.type) {
             case PROPERTY:
                 if (!tile.isOwned) {
+                    tileMessage.setValue("Landed on " + tile.name + ". Buy for $" + tile.price + "?");
                     purchaseEvent.setValue(new PurchaseEvent(player, tile));
                     return;
                 }
                 if (tile.ownerId != player.id) {
                     if (tile.mortgaged) {
+                        tileMessage.setValue(tile.name + " is mortgaged. No rent due.");
                         return;
                     }
                     List<Player> currentPlayers = players.getValue();
@@ -145,7 +149,10 @@ public class GameViewModel extends ViewModel {
                     }
                     player.money -= rent;
                     owner.money += rent;
+                    tileMessage.setValue("Paid $" + rent + " to " + owner.name + " for " + tile.name + ".");
                     players.setValue(currentPlayers);
+                } else {
+                    tileMessage.setValue("You landed on your own property: " + tile.name + ".");
                 }
                 break;
             case CHANCE:
@@ -160,10 +167,28 @@ public class GameViewModel extends ViewModel {
                 break;
             case TAX:
                 player.money -= tile.price;
+                tileMessage.setValue("Paid $" + tile.price + " in taxes.");
                 players.setValue(players.getValue());
                 break;
             case GO_TO_JAIL:
                 sendToJail(player);
+                tileMessage.setValue("Go to Jail! Do not pass GO, do not collect $200.");
+                players.setValue(players.getValue());
+                break;
+            case JAIL:
+                if (player.inJail) {
+                    tileMessage.setValue("You are in Jail.");
+                } else {
+                    tileMessage.setValue("Just visiting Jail.");
+                }
+                players.setValue(players.getValue());
+                break;
+            case GO:
+                tileMessage.setValue("Landed on GO and collected $200.");
+                players.setValue(players.getValue());
+                break;
+            case FREE_PARKING:
+                tileMessage.setValue("Free Parking - take a break!");
                 players.setValue(players.getValue());
                 break;
             default:
