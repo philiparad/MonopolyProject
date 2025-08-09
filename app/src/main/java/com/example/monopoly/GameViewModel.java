@@ -18,6 +18,7 @@ public class GameViewModel extends ViewModel {
     // Public so that existing activities can observe or query the list directly
     public final MutableLiveData<List<Player>> players = new MutableLiveData<>();
     private final Map<Integer, Tile> tileMap = new HashMap<>();
+    private int lastRollTotal;
 
     /**
      * Emitted when a player lands on an unowned property and should be asked to
@@ -77,6 +78,7 @@ public class GameViewModel extends ViewModel {
             player.money += 200;
         }
         player.position = newPos;
+        lastRollTotal = rollTotal;
 
         Tile tile = tileMap.get(newPos);
         if (tile != null) {
@@ -116,7 +118,20 @@ public class GameViewModel extends ViewModel {
                 return;
             }
 
-            int rent = tile.rent + 5 * tile.houseCount;
+            int rent;
+            if ("Utility".equals(tile.colorGroup)) {
+                int owned = countOwned(tile.ownerId, "Utility");
+                int multiplier = tile.rent[Math.max(0, owned - 1)];
+                rent = multiplier * lastRollTotal;
+            } else if ("Railroad".equals(tile.colorGroup)) {
+                int owned = countOwned(tile.ownerId, "Railroad");
+                rent = tile.rent[Math.max(0, owned - 1)];
+            } else {
+                rent = tile.rent[tile.houseCount];
+                if (tile.houseCount == 0 && ownsGroup(tile.ownerId, tile.colorGroup)) {
+                    rent *= 2;
+                }
+            }
             player.money -= rent;
             owner.money += rent;
 
@@ -153,14 +168,38 @@ public class GameViewModel extends ViewModel {
 
     public void upgradeHouse(int playerId, Tile tile) {
         if (tile.ownerId == playerId && tile.houseCount < 5) {
-            tile.houseCount++;
             for (Player p : players.getValue()) {
-                if (p.id == playerId && p.money >= 50) {
-                    p.money -= 50;
+                if (p.id == playerId && p.money >= tile.houseCost) {
+                    p.money -= tile.houseCost;
+                    tile.houseCount++;
                     break;
                 }
             }
             players.setValue(players.getValue());
         }
+    }
+
+    private int countOwned(int ownerId, String color) {
+        int count = 0;
+        for (Tile t : tileMap.values()) {
+            if (color.equals(t.colorGroup) && t.ownerId == ownerId) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean ownsGroup(int ownerId, String color) {
+        int total = 0;
+        int owned = 0;
+        for (Tile t : tileMap.values()) {
+            if (color.equals(t.colorGroup)) {
+                total++;
+                if (t.ownerId == ownerId) {
+                    owned++;
+                }
+            }
+        }
+        return total > 0 && total == owned;
     }
 }

@@ -34,6 +34,19 @@ public class PropertyListActivity extends AppCompatActivity {
                 sb.append(t.name)
                   .append(" - Owned by: ")
                   .append(owner)
+                  .append(", Color: ")
+                  .append(t.colorGroup)
+                  .append(", Rent: ");
+                for (int i = 0; i < t.rent.length; i++) {
+                    sb.append(t.rent[i]);
+                    if (i < t.rent.length - 1) {
+                        sb.append("/");
+                    }
+                }
+                sb.append(", House Cost: ")
+                  .append(t.houseCost)
+                  .append(", Mortgage: ")
+                  .append(t.mortgageValue)
                   .append(", Houses: ")
                   .append(t.houseCount)
                   .append("\n");
