@@ -11,10 +11,14 @@ public class Player {
     public String name;
     public int position;
     public int money;
+    public boolean inJail;
+    public int jailFreeCards;
 
     public Player(String name) {
         this.name = name;
         this.position = 0;
         this.money = 1500;
+        this.inJail = false;
+        this.jailFreeCards = 0;
     }
 }
