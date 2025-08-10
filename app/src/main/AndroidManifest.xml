@@ -13,6 +13,7 @@
         <activity android:name=".StatsActivity"/>
         <activity android:name=".VisualBoardActivity"/>
         <activity android:name=".PropertyListActivity"/>
+        <activity android:name=".TradeActivity"/>
         <activity android:name=".MainActivity"/>
         <activity
             android:name=".MainMenuActivity"

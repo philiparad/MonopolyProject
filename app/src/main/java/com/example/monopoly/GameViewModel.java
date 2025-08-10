@@ -441,6 +441,43 @@ public class GameViewModel extends ViewModel {
         }
     }
 
+    /**
+     * Trade a set of properties from one player to another for the specified
+     * cash amount. Validates that the "from" player owns each property and
+     * that the "to" player can afford the cash portion before completing the
+     * trade.
+     */
+    public void trade(Player from, Player to, List<Tile> properties, int cash) {
+        if (from == null || to == null || properties == null) {
+            return;
+        }
+
+        // Ensure the recipient has enough money for the trade
+        if (cash < 0 || to.money < cash) {
+            return;
+        }
+
+        // Ensure all properties are owned by the "from" player
+        for (Tile t : properties) {
+            if (t.ownerId != from.id) {
+                return;
+            }
+        }
+
+        // Transfer cash
+        if (cash > 0) {
+            from.money += cash;
+            to.money -= cash;
+        }
+
+        // Transfer property ownership
+        for (Tile t : properties) {
+            t.ownerId = to.id;
+        }
+
+        players.setValue(players.getValue());
+    }
+
     public void upgradeHouse(int playerId, Tile tile) {
         // Must own the tile and entire color group
         if (tile.ownerId != playerId || !ownsGroup(playerId, tile.colorGroup)) {
