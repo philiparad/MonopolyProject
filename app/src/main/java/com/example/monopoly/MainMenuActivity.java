@@ -26,4 +26,9 @@ public class MainMenuActivity extends AppCompatActivity {
         Intent intent = new Intent(this, VisualBoardActivity.class);
         startActivity(intent);
     }
+
+    public void showTrade(View view) {
+        Intent intent = new Intent(this, TradeActivity.class);
+        startActivity(intent);
+    }
 }

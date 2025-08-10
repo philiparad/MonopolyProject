@@ -21,4 +21,9 @@ public class Player {
         this.inJail = false;
         this.jailFreeCards = 0;
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

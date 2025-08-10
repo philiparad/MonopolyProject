@@ -11,4 +11,7 @@
 
     <Button android:text="לוח גרפי" android:onClick="showBoard"
         android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"/>
+
+    <Button android:text="Trade" android:onClick="showTrade"
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"/>
 </LinearLayout>
