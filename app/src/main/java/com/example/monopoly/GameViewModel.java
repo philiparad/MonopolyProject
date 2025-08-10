@@ -32,6 +32,8 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<Card> cardDrawn = new MutableLiveData<>();
     // Simple string messages to prompt the user when landing on special tiles
     public final MutableLiveData<String> tileMessage = new MutableLiveData<>();
+    // Emits a tile when an auction should be started for it
+    public final MutableLiveData<Tile> auctionTile = new MutableLiveData<>();
     private final CardDeck chanceDeck = new CardDeck("CHANCE");
     private final CardDeck communityDeck = new CardDeck("COMMUNITY_CHEST");
 
@@ -384,8 +386,32 @@ public class GameViewModel extends ViewModel {
     /**
      * Clear any outstanding purchase prompt without buying the property.
      */
-    public void declinePurchase() {
+    public void declinePurchase(Tile tile) {
         purchaseEvent.setValue(null);
+        startAuction(tile);
+    }
+
+    /**
+     * Begin an auction for an unowned property. Observers can listen to
+     * {@link #auctionTile} to prompt players for bids.
+     */
+    public void startAuction(Tile tile) {
+        auctionTile.setValue(tile);
+    }
+
+    /**
+     * Complete an auction by assigning the property to the highest bidder and
+     * deducting the winning bid from their money.
+     */
+    public void completeAuction(Player winner, Tile tile, int bid) {
+        if (winner != null && tile != null && bid > 0 && winner.money >= bid) {
+            winner.money -= bid;
+            tile.isOwned = true;
+            tile.ownerId = winner.id;
+            players.setValue(players.getValue());
+            tileMessage.setValue(winner.name + " won " + tile.name + " for $" + bid + ".");
+        }
+        auctionTile.setValue(null);
     }
 
     /**

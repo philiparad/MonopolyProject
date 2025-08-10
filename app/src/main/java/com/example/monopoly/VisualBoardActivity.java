@@ -1,6 +1,8 @@
 package com.example.monopoly;
 
 import android.os.Bundle;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 
@@ -52,6 +54,12 @@ public class VisualBoardActivity extends AppCompatActivity {
             }
         });
 
+        viewModel.auctionTile.observe(this, tile -> {
+            if (tile != null) {
+                showAuctionDialog(tile);
+            }
+        });
+
         viewModel.cardDrawn.observe(this, card -> {
             if (card != null) {
                 new AlertDialog.Builder(this)
@@ -99,13 +107,54 @@ public class VisualBoardActivity extends AppCompatActivity {
         token.setLayoutParams(params);
     }
 
+    private void showAuctionDialog(Tile tile) {
+        List<Player> bidders = viewModel.players.getValue();
+        if (bidders == null) {
+            return;
+        }
+        promptBid(tile, bidders, 0, 0, null);
+    }
+
+    private void promptBid(Tile tile, List<Player> bidders, int index, int highestBid, Player highestBidder) {
+        if (index >= bidders.size()) {
+            if (highestBidder != null) {
+                viewModel.completeAuction(highestBidder, tile, highestBid);
+            } else {
+                viewModel.completeAuction(null, tile, 0);
+            }
+            return;
+        }
+        Player bidder = bidders.get(index);
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        new AlertDialog.Builder(this)
+                .setTitle("Auction: " + tile.name)
+                .setMessage(bidder.name + ", enter bid or leave blank to pass")
+                .setView(input)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    String text = input.getText().toString().trim();
+                    if (!text.isEmpty()) {
+                        int bid = Integer.parseInt(text);
+                        if (bid <= bidder.money && bid > highestBid) {
+                            promptBid(tile, bidders, index + 1, bid, bidder);
+                        } else {
+                            promptBid(tile, bidders, index + 1, highestBid, highestBidder);
+                        }
+                    } else {
+                        promptBid(tile, bidders, index + 1, highestBid, highestBidder);
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
     private void showPurchaseDialog(GameViewModel.PurchaseEvent event) {
         new AlertDialog.Builder(this)
                 .setTitle("Purchase Property")
                 .setMessage("Buy " + event.tile.name + " for $" + event.tile.price + "?")
                 .setPositiveButton("Buy", (dialog, which) ->
                         viewModel.buyProperty(event.player, event.tile))
-                .setNegativeButton("Cancel", (dialog, which) -> viewModel.declinePurchase())
+                .setNegativeButton("Cancel", (dialog, which) -> viewModel.declinePurchase(event.tile))
                 .show();
     }
 }
