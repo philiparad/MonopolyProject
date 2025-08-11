@@ -31,6 +31,7 @@ public class TradeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_trade);
 
         viewModel = new ViewModelProvider(this).get(GameViewModel.class);
+        viewModel.loadState(getApplicationContext());
 
         fromSpinner = findViewById(R.id.spinner_from);
         toSpinner = findViewById(R.id.spinner_to);
@@ -100,6 +101,12 @@ public class TradeActivity extends AppCompatActivity {
         });
 
         refreshProperties(getSelectedFrom());
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.saveState(getApplicationContext());
     }
 
     private Player getSelectedFrom() {

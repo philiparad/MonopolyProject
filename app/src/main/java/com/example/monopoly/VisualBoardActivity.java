@@ -31,6 +31,7 @@ public class VisualBoardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_visual_board);
 
         viewModel = new ViewModelProvider(this).get(GameViewModel.class);
+        viewModel.loadState(getApplicationContext());
         boardContainer = findViewById(R.id.board_container);
         grid = findViewById(R.id.visual_board);
 
@@ -104,6 +105,12 @@ public class VisualBoardActivity extends AppCompatActivity {
                 finish();
             }
         });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.saveState(getApplicationContext());
     }
 
     private void addPlayerTokens(List<Player> players) {

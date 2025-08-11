@@ -1,9 +1,11 @@
 package com.example.monopoly;
 
+import android.content.Context;
 import android.util.Log;
 
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import androidx.room.Room;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +21,8 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<List<Player>> players = new MutableLiveData<>();
     private final Map<Integer, Tile> tileMap = new HashMap<>();
     private int lastRollTotal;
+    private MonopolyDatabase db;
+    private Context appContext;
 
     // Track the current turn and doubles rolled in succession
     private int currentPlayerIndex;
@@ -718,5 +722,114 @@ public class GameViewModel extends ViewModel {
             }
         }
         return total > 0 && total == owned;
+    }
+
+    /**
+     * Persist the current game state to the database. Activities should invoke this
+     * during lifecycle events such as {@code onPause} to ensure progress is not lost.
+     */
+    public void saveState(Context context) {
+        appContext = context.getApplicationContext();
+        if (db == null) {
+            db = Room.databaseBuilder(appContext, MonopolyDatabase.class, "monopoly.db")
+                    .allowMainThreadQueries()
+                    .fallbackToDestructiveMigration()
+                    .build();
+        }
+
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers != null) {
+            db.playerDao().clear();
+            for (Player p : currentPlayers) {
+                db.playerDao().insertPlayer(p);
+            }
+        }
+
+        db.ownershipDao().clear();
+        for (Map.Entry<Integer, Tile> entry : tileMap.entrySet()) {
+            Tile t = entry.getValue();
+            if (t.isOwned) {
+                Ownership o = new Ownership();
+                o.tileId = entry.getKey();
+                o.playerId = t.ownerId;
+                o.houseCount = t.houseCount;
+                o.mortgaged = t.mortgaged;
+                db.ownershipDao().insert(o);
+            }
+        }
+
+        GameSession session = new GameSession();
+        session.id = 1;
+        session.currentPlayerIndex = currentPlayerIndex;
+        session.housesAvailable = housesAvailable;
+        session.hotelsAvailable = hotelsAvailable;
+        db.gameSessionDao().insert(session);
+
+        if (db.tileDao().count() == 0) {
+            // Store static tile info once
+            List<TileEntity> tiles = new ArrayList<>();
+            for (Map.Entry<Integer, Tile> entry : tileMap.entrySet()) {
+                Tile t = entry.getValue();
+                TileEntity te = new TileEntity();
+                te.id = entry.getKey();
+                te.name = t.name;
+                te.type = t.type.name();
+                te.price = t.price;
+                te.colorGroup = t.colorGroup;
+                tiles.add(te);
+            }
+            db.tileDao().insertAll(tiles);
+        }
+    }
+
+    /**
+     * Load any previously saved game state from the database. If no state exists the
+     * default initialisation performed in the constructor is retained.
+     */
+    public void loadState(Context context) {
+        appContext = context.getApplicationContext();
+        if (db == null) {
+            db = Room.databaseBuilder(appContext, MonopolyDatabase.class, "monopoly.db")
+                    .allowMainThreadQueries()
+                    .fallbackToDestructiveMigration()
+                    .build();
+        }
+
+        List<Player> storedPlayers = db.playerDao().getAllPlayers();
+        if (storedPlayers != null && !storedPlayers.isEmpty()) {
+            players.setValue(storedPlayers);
+        }
+
+        GameSession session = db.gameSessionDao().getSession(1);
+        if (session != null) {
+            currentPlayerIndex = session.currentPlayerIndex;
+            housesAvailable = session.housesAvailable;
+            hotelsAvailable = session.hotelsAvailable;
+            List<Player> currentPlayers = players.getValue();
+            if (currentPlayers != null && !currentPlayers.isEmpty()) {
+                currentTurn.setValue(currentPlayers.get(currentPlayerIndex % currentPlayers.size()));
+            }
+        }
+
+        List<Ownership> ownerships = db.ownershipDao().getAll();
+        if (ownerships != null) {
+            for (Ownership o : ownerships) {
+                Tile t = tileMap.get(o.tileId);
+                if (t != null) {
+                    t.isOwned = true;
+                    t.ownerId = o.playerId;
+                    t.houseCount = o.houseCount;
+                    t.mortgaged = o.mortgaged;
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onCleared() {
+        if (appContext != null) {
+            saveState(appContext);
+        }
+        super.onCleared();
     }
 }

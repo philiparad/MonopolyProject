@@ -19,6 +19,7 @@ public class StatsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_stats);
 
         viewModel = new ViewModelProvider(this).get(GameViewModel.class);
+        viewModel.loadState(getApplicationContext());
         statsText = findViewById(R.id.stats_text);
 
         updateStats(viewModel.players.getValue());
@@ -29,6 +30,12 @@ public class StatsActivity extends AppCompatActivity {
                 Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.saveState(getApplicationContext());
     }
 
     private void updateStats(List<Player> players) {
