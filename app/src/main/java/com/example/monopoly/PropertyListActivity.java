@@ -21,6 +21,7 @@ public class PropertyListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_property_list);
 
         viewModel = new ViewModelProvider(this).get(GameViewModel.class);
+        viewModel.loadState(getApplicationContext());
         refreshProperties();
 
         viewModel.players.observe(this, players -> refreshProperties());
@@ -30,6 +31,12 @@ public class PropertyListActivity extends AppCompatActivity {
                 Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.saveState(getApplicationContext());
     }
 
     private void refreshProperties() {
