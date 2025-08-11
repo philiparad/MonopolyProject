@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -23,6 +24,12 @@ public class PropertyListActivity extends AppCompatActivity {
         refreshProperties();
 
         viewModel.players.observe(this, players -> refreshProperties());
+
+        viewModel.currentTurn.observe(this, player -> {
+            if (player != null) {
+                Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void refreshProperties() {

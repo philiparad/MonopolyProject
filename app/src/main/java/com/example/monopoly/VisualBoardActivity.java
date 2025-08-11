@@ -5,6 +5,7 @@ import android.text.InputType;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -77,6 +78,12 @@ public class VisualBoardActivity extends AppCompatActivity {
                         .setMessage(msg)
                         .setPositiveButton("OK", null)
                         .show();
+            }
+        });
+
+        viewModel.currentTurn.observe(this, player -> {
+            if (player != null) {
+                Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
             }
         });
     }
