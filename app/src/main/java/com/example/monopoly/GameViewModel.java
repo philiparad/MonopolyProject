@@ -95,6 +95,63 @@ public class GameViewModel extends ViewModel {
     }
 
     /**
+     * Execute a full turn for the current player, handling jail logic and
+     * advancement of the turn order. The caller can specify whether the player
+     * wishes to pay the jail fine or use a Get-Out-of-Jail-Free card before
+     * attempting to roll doubles.
+     *
+     * @param payFine whether the player opts to pay the $50 fine to leave jail
+     * @param useCard whether the player opts to use a Get-Out-of-Jail-Free card
+     * @return the dice rolled for this turn
+     */
+    public int[] takeTurn(boolean payFine, boolean useCard) {
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null || currentPlayers.isEmpty()) {
+            return new int[] {0, 0, 0};
+        }
+        Player player = currentPlayers.get(currentPlayerIndex);
+        int[] roll = rollDice();
+        boolean rolledDouble = roll[0] == roll[1];
+
+        if (player.inJail) {
+            if (useCard && player.jailFreeCards > 0) {
+                player.jailFreeCards--;
+                player.inJail = false;
+                player.jailTurns = 0;
+                movePlayer(player, roll[2]);
+                nextTurn(false);
+            } else if (payFine && player.money >= 50) {
+                player.money -= 50;
+                player.inJail = false;
+                player.jailTurns = 0;
+                movePlayer(player, roll[2]);
+                nextTurn(false);
+            } else if (rolledDouble) {
+                player.inJail = false;
+                player.jailTurns = 0;
+                movePlayer(player, roll[2]);
+                nextTurn(false);
+            } else {
+                player.jailTurns--;
+                if (player.jailTurns <= 0) {
+                    player.money -= 50;
+                    player.inJail = false;
+                    movePlayer(player, roll[2]);
+                }
+                nextTurn(false);
+                players.setValue(currentPlayers);
+                return roll;
+            }
+        } else {
+            movePlayer(player, roll[2]);
+            nextTurn(rolledDouble);
+        }
+
+        players.setValue(currentPlayers);
+        return roll;
+    }
+
+    /**
      * Advance to the next player's turn, accounting for doubles. If a double
      * is rolled the same player retains the turn unless it is the third
      * consecutive double, which sends the player to jail and advances the
@@ -129,6 +186,9 @@ public class GameViewModel extends ViewModel {
      * Wraps around the board and awards $200 for passing GO.
      */
     public void movePlayer(Player player, int rollTotal) {
+        if (player.inJail) {
+            return;
+        }
         int oldPos = player.position;
         int newPos = (oldPos + rollTotal) % 40;
         if (oldPos + rollTotal >= 40) {
@@ -365,6 +425,7 @@ public class GameViewModel extends ViewModel {
     private void sendToJail(Player player) {
         player.position = 10;
         player.inJail = true;
+        player.jailTurns = 3;
     }
 
     private int findNearestRailroad(int position) {
