@@ -12,6 +12,7 @@ public class Player {
     public int position;
     public int money;
     public boolean inJail;
+    public int jailTurns;
     public int jailFreeCards;
 
     public Player(String name) {
@@ -19,6 +20,7 @@ public class Player {
         this.position = 0;
         this.money = 1500;
         this.inJail = false;
+        this.jailTurns = 0;
         this.jailFreeCards = 0;
     }
 
