@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/visual_board"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/board_container"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:columnCount="10"
-    android:rowCount="10"
-    android:padding="4dp">
+    android:layout_height="match_parent">
 
-    <!-- Placeholder views for board tiles will be added dynamically -->
+    <GridLayout
+        android:id="@+id/visual_board"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:columnCount="10"
+        android:rowCount="10"
+        android:padding="4dp" />
 
-</GridLayout>
+</FrameLayout>
+
