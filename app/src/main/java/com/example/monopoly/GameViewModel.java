@@ -39,6 +39,8 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<String> tileMessage = new MutableLiveData<>();
     // Emits a tile when an auction should be started for it
     public final MutableLiveData<Tile> auctionTile = new MutableLiveData<>();
+    // Emits the winning player when the game ends
+    public final MutableLiveData<Player> gameOver = new MutableLiveData<>();
     private final CardDeck chanceDeck = new CardDeck("CHANCE");
     private final CardDeck communityDeck = new CardDeck("COMMUNITY_CHEST");
 
@@ -247,10 +249,9 @@ public class GameViewModel extends ViewModel {
                             rent *= 2;
                         }
                     }
-                    player.money -= rent;
-                    owner.money += rent;
+                    transferMoney(player, owner, rent);
                     tileMessage.setValue("Paid $" + rent + " to " + owner.name + " for " + tile.name + ".");
-                    players.setValue(currentPlayers);
+                    players.setValue(players.getValue());
                 } else {
                     tileMessage.setValue("You landed on your own property: " + tile.name + ".");
                 }
@@ -266,7 +267,7 @@ public class GameViewModel extends ViewModel {
                 cardDrawn.setValue(chestCard);
                 break;
             case TAX:
-                player.money -= tile.price;
+                transferMoney(player, null, tile.price);
                 tileMessage.setValue("Paid $" + tile.price + " in taxes.");
                 players.setValue(players.getValue());
                 break;
@@ -302,22 +303,26 @@ public class GameViewModel extends ViewModel {
             return;
         }
 
-        player.money += card.moneyChange;
+        if (card.moneyChange != 0) {
+            if (card.moneyChange > 0) {
+                transferMoney(null, player, card.moneyChange);
+            } else {
+                transferMoney(player, null, -card.moneyChange);
+            }
+        }
 
         if (card.collectFromEachPlayer > 0) {
-            for (Player p : currentPlayers) {
+            for (Player p : new ArrayList<>(currentPlayers)) {
                 if (p.id != player.id) {
-                    p.money -= card.collectFromEachPlayer;
-                    player.money += card.collectFromEachPlayer;
+                    transferMoney(p, player, card.collectFromEachPlayer);
                 }
             }
         }
 
         if (card.payEachPlayer > 0) {
-            for (Player p : currentPlayers) {
+            for (Player p : new ArrayList<>(currentPlayers)) {
                 if (p.id != player.id) {
-                    p.money += card.payEachPlayer;
-                    player.money -= card.payEachPlayer;
+                    transferMoney(player, p, card.payEachPlayer);
                 }
             }
         }
@@ -335,7 +340,9 @@ public class GameViewModel extends ViewModel {
                 }
             }
             int cost = houses * card.houseRepairCost + hotels * card.hotelRepairCost;
-            player.money -= cost;
+            if (cost > 0) {
+                transferMoney(player, null, cost);
+            }
         }
 
         if (card.getOutOfJailFree) {
@@ -364,10 +371,11 @@ public class GameViewModel extends ViewModel {
                     if (card.payDoubleRent) {
                         rent *= 2;
                     }
-                    player.money -= rent;
                     Player owner = getPlayer(tile.ownerId);
                     if (owner != null) {
-                        owner.money += rent;
+                        transferMoney(player, owner, rent);
+                    } else {
+                        transferMoney(player, null, rent);
                     }
                 } else if (!tile.isOwned) {
                     purchaseEvent.setValue(new PurchaseEvent(player, tile));
@@ -384,10 +392,11 @@ public class GameViewModel extends ViewModel {
             if (tile != null) {
                 if (tile.isOwned && tile.ownerId != player.id) {
                     int rent = 10 * lastRollTotal;
-                    player.money -= rent;
                     Player owner = getPlayer(tile.ownerId);
                     if (owner != null) {
-                        owner.money += rent;
+                        transferMoney(player, owner, rent);
+                    } else {
+                        transferMoney(player, null, rent);
                     }
                 } else if (!tile.isOwned) {
                     purchaseEvent.setValue(new PurchaseEvent(player, tile));
@@ -461,6 +470,67 @@ public class GameViewModel extends ViewModel {
             }
         }
         return null;
+    }
+
+    /**
+     * Transfer money between players or the bank and handle bankruptcy when a
+     * player's funds fall below zero.
+     */
+    private void transferMoney(Player from, Player to, int amount) {
+        if (from != null) {
+            from.money -= amount;
+        }
+        if (to != null) {
+            to.money += amount;
+        }
+        if (from != null && from.money < 0) {
+            handleBankruptcy(from, to);
+        }
+    }
+
+    /**
+     * Remove a bankrupt player from the game, transferring their properties to
+     * the creditor or back to the bank. Triggers game over when one player
+     * remains.
+     */
+    private void handleBankruptcy(Player bankrupt, Player creditor) {
+        for (Tile t : tileMap.values()) {
+            if (t.ownerId == bankrupt.id) {
+                if (creditor != null) {
+                    t.ownerId = creditor.id;
+                } else {
+                    t.isOwned = false;
+                    t.ownerId = -1;
+                    t.houseCount = 0;
+                    t.mortgaged = false;
+                }
+            }
+        }
+
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null) {
+            return;
+        }
+        int removedIndex = currentPlayers.indexOf(bankrupt);
+        currentPlayers.remove(bankrupt);
+
+        if (currentPlayers.isEmpty()) {
+            players.setValue(currentPlayers);
+            return;
+        }
+
+        if (removedIndex <= currentPlayerIndex && currentPlayerIndex > 0) {
+            currentPlayerIndex--;
+        }
+        currentPlayerIndex %= currentPlayers.size();
+
+        if (currentPlayers.size() == 1) {
+            gameOver.setValue(currentPlayers.get(0));
+        } else {
+            currentTurn.setValue(currentPlayers.get(currentPlayerIndex));
+        }
+
+        players.setValue(currentPlayers);
     }
 
     /**
