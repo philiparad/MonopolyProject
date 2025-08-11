@@ -1,5 +1,6 @@
 package com.example.monopoly;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.EditText;
@@ -84,6 +85,15 @@ public class VisualBoardActivity extends AppCompatActivity {
         viewModel.currentTurn.observe(this, player -> {
             if (player != null) {
                 Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        viewModel.gameOver.observe(this, winner -> {
+            if (winner != null) {
+                Intent intent = new Intent(this, GameOverActivity.class);
+                intent.putExtra("winner", winner.name);
+                startActivity(intent);
+                finish();
             }
         });
     }
