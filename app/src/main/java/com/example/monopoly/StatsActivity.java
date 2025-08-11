@@ -2,6 +2,7 @@ package com.example.monopoly;
 
 import android.os.Bundle;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -22,6 +23,12 @@ public class StatsActivity extends AppCompatActivity {
 
         updateStats(viewModel.players.getValue());
         viewModel.players.observe(this, this::updateStats);
+
+        viewModel.currentTurn.observe(this, player -> {
+            if (player != null) {
+                Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void updateStats(List<Player> players) {

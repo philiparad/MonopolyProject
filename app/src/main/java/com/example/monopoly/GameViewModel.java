@@ -20,6 +20,11 @@ public class GameViewModel extends ViewModel {
     private final Map<Integer, Tile> tileMap = new HashMap<>();
     private int lastRollTotal;
 
+    // Track the current turn and doubles rolled in succession
+    private int currentPlayerIndex;
+    private int doublesCount;
+    public final MutableLiveData<Player> currentTurn = new MutableLiveData<>();
+
     // Track remaining houses and hotels available for building
     private int housesAvailable = 32;
     private int hotelsAvailable = 12;
@@ -58,6 +63,9 @@ public class GameViewModel extends ViewModel {
         initialPlayers.add(p1);
         initialPlayers.add(p2);
         players.setValue(initialPlayers);
+        currentPlayerIndex = 0;
+        doublesCount = 0;
+        currentTurn.setValue(initialPlayers.get(currentPlayerIndex));
 
         // Populate the board with the standard Monopoly tiles
         tileMap.putAll(Board.createTiles());
@@ -84,6 +92,36 @@ public class GameViewModel extends ViewModel {
         int die1 = 1 + (int) (Math.random() * 6);
         int die2 = 1 + (int) (Math.random() * 6);
         return new int[] { die1, die2, die1 + die2 };
+    }
+
+    /**
+     * Advance to the next player's turn, accounting for doubles. If a double
+     * is rolled the same player retains the turn unless it is the third
+     * consecutive double, which sends the player to jail and advances the
+     * turn. Observers are notified of the active player through
+     * {@link #currentTurn}.
+     *
+     * @param rolledDouble whether the current player rolled doubles
+     */
+    public void nextTurn(boolean rolledDouble) {
+        List<Player> currentPlayers = players.getValue();
+        if (currentPlayers == null || currentPlayers.isEmpty()) {
+            return;
+        }
+        if (rolledDouble) {
+            doublesCount++;
+            if (doublesCount >= 3) {
+                Player jailed = currentPlayers.get(currentPlayerIndex);
+                sendToJail(jailed);
+                players.setValue(currentPlayers);
+                doublesCount = 0;
+                currentPlayerIndex = (currentPlayerIndex + 1) % currentPlayers.size();
+            }
+        } else {
+            doublesCount = 0;
+            currentPlayerIndex = (currentPlayerIndex + 1) % currentPlayers.size();
+        }
+        currentTurn.setValue(currentPlayers.get(currentPlayerIndex));
     }
 
     /**

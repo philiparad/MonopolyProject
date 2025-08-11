@@ -9,6 +9,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -54,6 +55,12 @@ public class TradeActivity extends AppCompatActivity {
             }
             adapter.notifyDataSetChanged();
             refreshProperties(getSelectedFrom());
+        });
+
+        viewModel.currentTurn.observe(this, player -> {
+            if (player != null) {
+                Toast.makeText(this, player.name + "'s turn", Toast.LENGTH_SHORT).show();
+            }
         });
 
         fromSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
